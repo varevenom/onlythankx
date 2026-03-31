@@ -400,7 +400,7 @@ function PostCard({ post }: { post: Post }) {
         <img
           src={post.image_url}
           alt="Post image"
-          className="mb-4 w-full rounded-2xl border border-orange-100 object-cover"
+          className="mb-4 w-full max-h-[500px] rounded-2xl border border-orange-100 bg-white object-contain"
         />
       )}
 
