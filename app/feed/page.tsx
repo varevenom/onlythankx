@@ -19,6 +19,13 @@ type Post = {
   profiles: Profile | Profile[] | null
 }
 
+type Comment = {
+  id: string
+  content: string
+  created_at: string
+  profiles: Profile | Profile[] | null
+}
+
 export default function FeedPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -304,14 +311,25 @@ export default function FeedPage() {
 function PostCard({ post }: { post: Post }) {
   const [thanksCount, setThanksCount] = useState(0)
   const [hasThanked, setHasThanked] = useState(false)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [shareMessage, setShareMessage] = useState('')
 
   useEffect(() => {
     fetchThanks()
+    fetchComments()
   }, [])
 
   const profile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
   const username = profile?.username || 'user'
   const avatarUrl = profile?.avatar_url || '/logo.png'
+
+  const postUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/post/${post.id}`
+      : ''
 
   const fetchThanks = async () => {
     const { count } = await supabase
@@ -337,6 +355,28 @@ function PostCard({ post }: { post: Post }) {
     if (data) setHasThanked(true)
   }
 
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select(
+        `
+        id,
+        content,
+        created_at,
+        profiles (
+          username,
+          avatar_url
+        )
+      `
+      )
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true })
+
+    if (!error) {
+      setComments((data as Comment[]) || [])
+    }
+  }
+
   const handleThanks = async () => {
     const {
       data: { user },
@@ -355,6 +395,62 @@ function PostCard({ post }: { post: Post }) {
       setThanksCount((prev) => prev + 1)
       setHasThanked(true)
     }
+  }
+
+  const handleComment = async () => {
+    if (!commentText.trim()) return
+
+    setCommentLoading(true)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setCommentLoading(false)
+      return
+    }
+
+    const { error } = await supabase.from('comments').insert([
+      {
+        user_id: user.id,
+        post_id: post.id,
+        content: commentText.trim(),
+      },
+    ])
+
+    if (!error) {
+      setCommentText('')
+      await fetchComments()
+      setShowComments(true)
+    }
+
+    setCommentLoading(false)
+  }
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'OnlyThankx Post',
+          text: 'Check out this grateful post on OnlyThankx',
+          url: postUrl,
+        })
+        setShareMessage('Shared successfully')
+      } else {
+        await navigator.clipboard.writeText(postUrl)
+        setShareMessage('Link copied')
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(postUrl)
+        setShareMessage('Link copied')
+      } catch {
+        setShareMessage('Could not share')
+      }
+    }
+
+    setTimeout(() => setShareMessage(''), 2000)
   }
 
   return (
@@ -398,14 +494,90 @@ function PostCard({ post }: { post: Post }) {
 
         <span>{thanksCount}</span>
 
-        <button className="rounded-full bg-gray-50 px-4 py-2" type="button">
-          Welcome
+        <button
+          className="rounded-full bg-gray-50 px-4 py-2"
+          type="button"
+          onClick={() => setShowComments((prev) => !prev)}
+        >
+          Welcome {comments.length > 0 ? comments.length : ''}
         </button>
 
-        <button className="rounded-full bg-gray-50 px-4 py-2" type="button">
+        <button
+          className="rounded-full bg-gray-50 px-4 py-2"
+          type="button"
+          onClick={handleShare}
+        >
           Happy Share
         </button>
+
+        <Link
+          href={`/post/${post.id}`}
+          className="rounded-full bg-gray-50 px-4 py-2"
+        >
+          Open
+        </Link>
       </div>
+
+      {shareMessage && (
+        <p className="mt-3 text-sm text-orange-500">{shareMessage}</p>
+      )}
+
+      {showComments && (
+        <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50/30 p-4">
+          <div className="mb-4 flex gap-2">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a welcome comment..."
+              className="flex-1 rounded-xl border px-3 py-2 outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleComment}
+              disabled={commentLoading}
+              className="rounded-xl bg-orange-500 px-4 py-2 text-white disabled:opacity-70"
+            >
+              {commentLoading ? 'Posting...' : 'Comment'}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {comments.length === 0 ? (
+              <p className="text-sm text-gray-500">No comments yet.</p>
+            ) : (
+              comments.map((comment) => {
+                const commentProfile = Array.isArray(comment.profiles)
+                  ? comment.profiles[0]
+                  : comment.profiles
+
+                return (
+                  <div
+                    key={comment.id}
+                    className="rounded-2xl border border-orange-100 bg-white p-3"
+                  >
+                    <div className="mb-2 flex items-center gap-2">
+                      <img
+                        src={commentProfile?.avatar_url || '/logo.png'}
+                        alt="comment user"
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold">
+                          @{commentProfile?.username || 'user'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700">{comment.content}</p>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
     </article>
   )
 }
