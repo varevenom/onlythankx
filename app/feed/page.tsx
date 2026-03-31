@@ -77,23 +77,22 @@ export default function FeedPage() {
   const fetchPosts = async () => {
     const { data, error } = await supabase
       .from('posts')
-      .select(
-        `
+      .select(`
         id,
         user_id,
         content,
         image_url,
         created_at,
-        profiles (
+        profiles:profiles!posts_user_id_fkey (
           username,
           avatar_url
         )
-      `
-      )
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error(error.message)
+      console.error('fetchPosts error:', error.message)
+      setMessage(`Could not load posts: ${error.message}`)
       return
     }
 
@@ -120,7 +119,10 @@ export default function FeedPage() {
     if (imagePreview) URL.revokeObjectURL(imagePreview)
     setImage(null)
     setImagePreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const handlePost = async () => {
@@ -189,7 +191,11 @@ export default function FeedPage() {
       <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="OnlyThankx" className="h-10 w-10 rounded-xl" />
+            <img
+              src="/logo.png"
+              alt="OnlyThankx"
+              className="h-10 w-10 rounded-xl"
+            />
             <div>
               <h1 className="text-lg font-bold">OnlyThankx</h1>
               <p className="text-xs text-gray-500">Share gratitude beautifully</p>
@@ -223,7 +229,9 @@ export default function FeedPage() {
             />
             <div>
               <p className="font-semibold">@{myUsername}</p>
-              <p className="text-sm text-gray-500">What are you thankful for today?</p>
+              <p className="text-sm text-gray-500">
+                What are you thankful for today?
+              </p>
             </div>
           </div>
 
@@ -297,7 +305,9 @@ export default function FeedPage() {
         <div className="space-y-5">
           {posts.length === 0 ? (
             <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
-              <p className="text-gray-500">No posts yet. Make the first thankful post ✨</p>
+              <p className="text-gray-500">
+                No posts yet. Make the first thankful post ✨
+              </p>
             </div>
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)
@@ -358,17 +368,15 @@ function PostCard({ post }: { post: Post }) {
   const fetchComments = async () => {
     const { data, error } = await supabase
       .from('comments')
-      .select(
-        `
+      .select(`
         id,
         content,
         created_at,
-        profiles (
+        profiles:profiles!comments_user_id_fkey (
           username,
           avatar_url
         )
-      `
-      )
+      `)
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
 
@@ -570,6 +578,7 @@ function PostCard({ post }: { post: Post }) {
                         </p>
                       </div>
                     </div>
+
                     <p className="text-sm text-gray-700">{comment.content}</p>
                   </div>
                 )
