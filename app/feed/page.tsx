@@ -43,28 +43,48 @@ export default function FeedPage() {
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-  useEffect(() => {
+    const init = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      await fetchMyProfile(user.id)
+      await fetchPosts()
+
+      channel = supabase
+        .channel('realtime-posts')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'posts',
+          },
+          async () => {
+            await fetchPosts()
+          }
+        )
+        .subscribe()
+    }
+
+    init()
+
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview)
+      }
     }
-  }, [imagePreview])
-
-  const checkUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    await fetchMyProfile(user.id)
-    await fetchPosts()
-  }
+  }, [])
 
   const fetchMyProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -364,9 +384,49 @@ function PostCard({
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
-    fetchThanks()
-    fetchComments()
-  }, [])
+    let commentsChannel: ReturnType<typeof supabase.channel> | null = null
+
+    const init = async () => {
+      await fetchThanks()
+      await fetchComments()
+
+      commentsChannel = supabase
+        .channel(`realtime-comments-${post.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'comments',
+            filter: `post_id=eq.${post.id}`,
+          },
+          async () => {
+            await fetchComments()
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'thanks',
+            filter: `post_id=eq.${post.id}`,
+          },
+          async () => {
+            await fetchThanks()
+          }
+        )
+        .subscribe()
+    }
+
+    init()
+
+    return () => {
+      if (commentsChannel) {
+        supabase.removeChannel(commentsChannel)
+      }
+    }
+  }, [post.id])
 
   const profile = post.profiles
   const username = profile?.username || 'user'
@@ -398,7 +458,7 @@ function PostCard({
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (data) setHasThanked(true)
+    setHasThanked(!!data)
   }
 
   const fetchComments = async () => {
