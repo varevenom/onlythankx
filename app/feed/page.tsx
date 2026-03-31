@@ -41,7 +41,6 @@ export default function FeedPage() {
   const [message, setMessage] = useState('')
   const [myUsername, setMyUsername] = useState('yourname')
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
-  const [currentUserId, setCurrentUserId] = useState('')
 
   useEffect(() => {
     checkUser()
@@ -62,8 +61,6 @@ export default function FeedPage() {
       router.push('/login')
       return
     }
-
-    setCurrentUserId(user.id)
 
     await fetchMyProfile(user.id)
     await fetchPosts()
@@ -340,7 +337,6 @@ export default function FeedPage() {
               <PostCard
                 key={post.id}
                 post={post}
-                currentUserId={currentUserId}
                 onPostDeleted={fetchPosts}
               />
             ))
@@ -353,11 +349,9 @@ export default function FeedPage() {
 
 function PostCard({
   post,
-  currentUserId,
   onPostDeleted,
 }: {
   post: Post
-  currentUserId: string
   onPostDeleted: () => Promise<void>
 }) {
   const [thanksCount, setThanksCount] = useState(0)
@@ -377,7 +371,6 @@ function PostCard({
   const profile = post.profiles
   const username = profile?.username || 'user'
   const avatarUrl = profile?.avatar_url || '/logo.png'
-  const isOwner = currentUserId === post.user_id
 
   const postUrl =
     typeof window !== 'undefined'
@@ -541,7 +534,6 @@ function PostCard({
           await supabase.storage.from('posts').remove([pathParts[1]])
         }
       } catch {
-        // ignore storage cleanup URL parsing errors
       }
     }
 
@@ -613,16 +605,14 @@ function PostCard({
           Open
         </Link>
 
-        {isOwner && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleteLoading}
-            className="rounded-full bg-red-100 px-4 py-2 text-red-600 disabled:opacity-70"
-          >
-            {deleteLoading ? 'Deleting...' : 'Delete'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleteLoading}
+          className="rounded-full bg-red-100 px-4 py-2 text-red-600 disabled:opacity-70"
+        >
+          {deleteLoading ? 'Deleting...' : 'Delete'}
+        </button>
       </div>
 
       {shareMessage && (
