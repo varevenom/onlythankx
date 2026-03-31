@@ -13,13 +13,16 @@ type Post = {
   id: string
   user_id: string
   content: string
+  image_url: string | null
   created_at: string
   profiles: Profile | Profile[] | null
 }
 
 export default function FeedPage() {
   const router = useRouter()
+
   const [content, setContent] = useState('')
+  const [image, setImage] = useState<File | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -39,18 +42,18 @@ export default function FeedPage() {
       return
     }
 
-    fetchMyProfile(user.id)
-    fetchPosts()
+    await fetchMyProfile(user.id)
+    await fetchPosts()
   }
 
   const fetchMyProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('username')
       .eq('id', userId)
       .single()
 
-    if (data?.username) {
+    if (!error && data?.username) {
       setMyUsername(data.username)
     }
   }
@@ -63,6 +66,7 @@ export default function FeedPage() {
         id,
         user_id,
         content,
+        image_url,
         created_at,
         profiles (
           username
@@ -80,7 +84,7 @@ export default function FeedPage() {
   }
 
   const handlePost = async () => {
-    if (!content.trim()) return
+    if (!content.trim() && !image) return
 
     setLoading(true)
     setMessage('')
@@ -95,10 +99,34 @@ export default function FeedPage() {
       return
     }
 
+    let imageUrl: string | null = null
+
+    if (image) {
+      const fileExt = image.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('posts')
+        .upload(fileName, image)
+
+      if (uploadError) {
+        setMessage('Image upload failed.')
+        setLoading(false)
+        return
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('posts')
+        .getPublicUrl(fileName)
+
+      imageUrl = publicUrlData.publicUrl
+    }
+
     const { error } = await supabase.from('posts').insert([
       {
         user_id: user.id,
         content: content.trim(),
+        image_url: imageUrl,
       },
     ])
 
@@ -109,6 +137,7 @@ export default function FeedPage() {
     }
 
     setContent('')
+    setImage(null)
     setMessage('Post created.')
     setLoading(false)
     fetchPosts()
@@ -177,6 +206,13 @@ export default function FeedPage() {
             onChange={(e) => setContent(e.target.value)}
           />
 
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            className="mt-3 block w-full text-sm text-gray-600"
+          />
+
           {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -192,7 +228,8 @@ export default function FeedPage() {
             <button
               type="button"
               onClick={handlePost}
-              className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white"
+              disabled={loading}
+              className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white disabled:opacity-70"
             >
               {loading ? 'Posting...' : 'Post Thanks'}
             </button>
@@ -291,6 +328,14 @@ function PostCard({ post }: { post: Post }) {
       </div>
 
       <p className="mb-4 text-[15px] leading-7 text-gray-700">{post.content}</p>
+
+      {post.image_url && (
+        <img
+          src={post.image_url}
+          alt="Post image"
+          className="mb-4 w-full rounded-2xl border border-orange-100 object-cover"
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-sm font-medium text-gray-600">
         <button
