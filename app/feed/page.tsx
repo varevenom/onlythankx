@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
+  id?: string
   username: string
   avatar_url?: string | null
 }
@@ -16,14 +17,16 @@ type Post = {
   content: string
   image_url: string | null
   created_at: string
-  profiles: Profile | Profile[] | null
+  profiles: Profile | null
 }
 
 type Comment = {
   id: string
+  user_id: string
+  post_id: string
   content: string
   created_at: string
-  profiles: Profile | Profile[] | null
+  profiles: Profile | null
 }
 
 export default function FeedPage() {
@@ -66,39 +69,56 @@ export default function FeedPage() {
   const fetchMyProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('username, avatar_url')
+      .select('id, username, avatar_url')
       .eq('id', userId)
       .single()
 
-    if (!error && data?.username) {
-      setMyUsername(data.username)
+    if (!error && data) {
+      setMyUsername(data.username || 'yourname')
       setMyAvatar(data.avatar_url || null)
     }
   }
 
   const fetchPosts = async () => {
-    const { data, error } = await supabase
+    setMessage('')
+
+    const { data: postsData, error: postsError } = await supabase
       .from('posts')
-      .select(`
-        id,
-        user_id,
-        content,
-        image_url,
-        created_at,
-        profiles (
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('fetchPosts error:', error.message)
-      setMessage(`Could not load posts: ${error.message}`)
+    if (postsError) {
+      console.error('fetchPosts error:', postsError.message)
+      setMessage(`Could not load posts: ${postsError.message}`)
       return
     }
 
-    setPosts((data as Post[]) || [])
+    if (!postsData || postsData.length === 0) {
+      setPosts([])
+      return
+    }
+
+    const userIds = [...new Set(postsData.map((post) => post.user_id).filter(Boolean))]
+
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .in('id', userIds)
+
+    if (profilesError) {
+      console.error('fetchProfiles error:', profilesError.message)
+    }
+
+    const postsWithProfiles: Post[] = postsData.map((post) => ({
+      ...post,
+      profiles:
+        profilesData?.find((profile) => profile.id === post.user_id) || {
+          username: 'user',
+          avatar_url: null,
+        },
+    }))
+
+    setPosts(postsWithProfiles)
   }
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -119,6 +139,7 @@ export default function FeedPage() {
 
   const clearSelectedImage = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview)
+
     setImage(null)
     setImagePreview(null)
 
@@ -180,7 +201,7 @@ export default function FeedPage() {
     clearSelectedImage()
     setMessage('Post created.')
     setLoading(false)
-    fetchPosts()
+    await fetchPosts()
   }
 
   const handleLogout = async () => {
@@ -334,7 +355,7 @@ function PostCard({ post }: { post: Post }) {
     fetchComments()
   }, [])
 
-  const profile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
+  const profile = post.profiles
   const username = profile?.username || 'user'
   const avatarUrl = profile?.avatar_url || '/logo.png'
 
@@ -368,23 +389,40 @@ function PostCard({ post }: { post: Post }) {
   }
 
   const fetchComments = async () => {
-    const { data, error } = await supabase
+    const { data: commentsData, error } = await supabase
       .from('comments')
-      .select(`
-        id,
-        content,
-        created_at,
-        profiles (
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
 
-    if (!error) {
-      setComments((data as Comment[]) || [])
+    if (error || !commentsData) {
+      return
     }
+
+    if (commentsData.length === 0) {
+      setComments([])
+      return
+    }
+
+    const commentUserIds = [
+      ...new Set(commentsData.map((comment) => comment.user_id).filter(Boolean)),
+    ]
+
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .in('id', commentUserIds)
+
+    const commentsWithProfiles: Comment[] = commentsData.map((comment) => ({
+      ...comment,
+      profiles:
+        profilesData?.find((profile) => profile.id === comment.user_id) || {
+          username: 'user',
+          avatar_url: null,
+        },
+    }))
+
+    setComments(commentsWithProfiles)
   }
 
   const handleThanks = async () => {
@@ -556,9 +594,7 @@ function PostCard({ post }: { post: Post }) {
               <p className="text-sm text-gray-500">No comments yet.</p>
             ) : (
               comments.map((comment) => {
-                const commentProfile = Array.isArray(comment.profiles)
-                  ? comment.profiles[0]
-                  : comment.profiles
+                const commentProfile = comment.profiles
 
                 return (
                   <div
