@@ -64,14 +64,16 @@ export default function FeedPage() {
   }
 
   const fetchMyProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('username, avatar_url')
       .eq('id', userId)
       .single()
 
-    if (data?.username) setMyUsername(data.username)
-    if (data?.avatar_url) setMyAvatar(data.avatar_url)
+    if (!error && data?.username) {
+      setMyUsername(data.username)
+      setMyAvatar(data.avatar_url || null)
+    }
   }
 
   const fetchPosts = async () => {
@@ -83,7 +85,7 @@ export default function FeedPage() {
         content,
         image_url,
         created_at,
-        profiles:profiles!posts_user_id_fkey (
+        profiles (
           username,
           avatar_url
         )
@@ -372,7 +374,7 @@ function PostCard({ post }: { post: Post }) {
         id,
         content,
         created_at,
-        profiles:profiles!comments_user_id_fkey (
+        profiles (
           username,
           avatar_url
         )
