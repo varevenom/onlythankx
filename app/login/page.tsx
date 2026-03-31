@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
+    setMessage('')
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -22,34 +24,29 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setError(error.message)
+      setMessage(error.message)
       setLoading(false)
       return
     }
 
+    setLoading(false)
     router.push('/feed')
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <div className="mb-6 flex justify-center">
-          <img src="/logo.png" alt="OnlyThankx" className="h-12 w-auto" />
+    <main className="flex min-h-screen items-center justify-center bg-[#fff8f2] px-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <div className="mb-6 text-center">
+          <img src="/logo.png" alt="OnlyThankx" className="mx-auto h-14 w-14 rounded-2xl" />
+          <h1 className="mt-4 text-4xl font-bold">Welcome back</h1>
+          <p className="mt-2 text-gray-500">Login to your OnlyThankx account</p>
         </div>
-
-        <h1 className="mb-2 text-center text-2xl font-bold">Welcome back</h1>
-
-        <p className="mb-6 text-center text-gray-500">
-          Login to your OnlyThankx account
-        </p>
-
-        {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
-            className="w-full rounded-lg border px-4 py-3"
+            className="w-full rounded-xl border px-4 py-3 outline-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -58,22 +55,28 @@ export default function LoginPage() {
           <input
             type="password"
             placeholder="Password"
-            className="w-full rounded-lg border px-4 py-3"
+            className="w-full rounded-xl border px-4 py-3 outline-none"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          <button className="w-full rounded-lg bg-orange-500 py-3 text-white">
+          {message && <p className="text-sm text-red-500">{message}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-orange-500 py-3 font-semibold text-white disabled:opacity-70"
+          >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
-          Don’t have an account?{' '}
-          <a href="/signup" className="text-orange-500">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="text-orange-500">
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </main>

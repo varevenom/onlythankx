@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 type Profile = {
   username: string
+  avatar_url?: string | null
 }
 
 type Post = {
@@ -29,6 +30,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [myUsername, setMyUsername] = useState('yourname')
+  const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     checkUser()
@@ -36,9 +38,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview)
-      }
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
     }
   }, [imagePreview])
 
@@ -59,13 +59,12 @@ export default function FeedPage() {
   const fetchMyProfile = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('username')
+      .select('username, avatar_url')
       .eq('id', userId)
       .single()
 
-    if (data?.username) {
-      setMyUsername(data.username)
-    }
+    if (data?.username) setMyUsername(data.username)
+    if (data?.avatar_url) setMyAvatar(data.avatar_url)
   }
 
   const fetchPosts = async () => {
@@ -79,7 +78,8 @@ export default function FeedPage() {
         image_url,
         created_at,
         profiles (
-          username
+          username,
+          avatar_url
         )
       `
       )
@@ -96,9 +96,7 @@ export default function FeedPage() {
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
 
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview)
-    }
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
 
     setImage(file)
 
@@ -112,16 +110,10 @@ export default function FeedPage() {
   }
 
   const clearSelectedImage = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview)
-    }
-
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
     setImage(null)
     setImagePreview(null)
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handlePost = async () => {
@@ -190,11 +182,7 @@ export default function FeedPage() {
       <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="OnlyThankx"
-              className="h-10 w-10 rounded-xl"
-            />
+            <img src="/logo.png" alt="OnlyThankx" className="h-10 w-10 rounded-xl" />
             <div>
               <h1 className="text-lg font-bold">OnlyThankx</h1>
               <p className="text-xs text-gray-500">Share gratitude beautifully</p>
@@ -222,15 +210,13 @@ export default function FeedPage() {
         <div className="mb-6 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-3">
             <img
-              src="/logo.png"
+              src={myAvatar || '/logo.png'}
               alt="profile"
               className="h-12 w-12 rounded-full border border-orange-200 object-cover"
             />
             <div>
               <p className="font-semibold">@{myUsername}</p>
-              <p className="text-sm text-gray-500">
-                What are you thankful for today?
-              </p>
+              <p className="text-sm text-gray-500">What are you thankful for today?</p>
             </div>
           </div>
 
@@ -304,9 +290,7 @@ export default function FeedPage() {
         <div className="space-y-5">
           {posts.length === 0 ? (
             <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
-              <p className="text-gray-500">
-                No posts yet. Make the first thankful post ✨
-              </p>
+              <p className="text-gray-500">No posts yet. Make the first thankful post ✨</p>
             </div>
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)
@@ -325,12 +309,9 @@ function PostCard({ post }: { post: Post }) {
     fetchThanks()
   }, [])
 
-  const getUsername = () => {
-    if (Array.isArray(post.profiles)) {
-      return post.profiles[0]?.username || 'user'
-    }
-    return post.profiles?.username || 'user'
-  }
+  const profile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
+  const username = profile?.username || 'user'
+  const avatarUrl = profile?.avatar_url || '/logo.png'
 
   const fetchThanks = async () => {
     const { count } = await supabase
@@ -380,12 +361,12 @@ function PostCard({ post }: { post: Post }) {
     <article className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-3">
         <img
-          src="/logo.png"
+          src={avatarUrl}
           alt="user"
           className="h-12 w-12 rounded-full border border-orange-200 object-cover"
         />
         <div>
-          <p className="font-semibold">@{getUsername()}</p>
+          <p className="font-semibold">@{username}</p>
           <p className="text-sm text-gray-500">
             {new Date(post.created_at).toLocaleString()}
           </p>
