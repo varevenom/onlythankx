@@ -41,6 +41,7 @@ export default function FeedPage() {
   const [message, setMessage] = useState('')
   const [myUsername, setMyUsername] = useState('yourname')
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState('')
 
   useEffect(() => {
     checkUser()
@@ -61,6 +62,8 @@ export default function FeedPage() {
       router.push('/login')
       return
     }
+
+    setCurrentUserId(user.id)
 
     await fetchMyProfile(user.id)
     await fetchPosts()
@@ -333,7 +336,14 @@ export default function FeedPage() {
               </p>
             </div>
           ) : (
-            posts.map((post) => <PostCard key={post.id} post={post} />)
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={currentUserId}
+                onPostDeleted={fetchPosts}
+              />
+            ))
           )}
         </div>
       </section>
@@ -341,7 +351,15 @@ export default function FeedPage() {
   )
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({
+  post,
+  currentUserId,
+  onPostDeleted,
+}: {
+  post: Post
+  currentUserId: string
+  onPostDeleted: () => Promise<void>
+}) {
   const [thanksCount, setThanksCount] = useState(0)
   const [hasThanked, setHasThanked] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
@@ -349,6 +367,7 @@ function PostCard({ post }: { post: Post }) {
   const [commentText, setCommentText] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
   const [shareMessage, setShareMessage] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     fetchThanks()
@@ -358,6 +377,7 @@ function PostCard({ post }: { post: Post }) {
   const profile = post.profiles
   const username = profile?.username || 'user'
   const avatarUrl = profile?.avatar_url || '/logo.png'
+  const isOwner = currentUserId === post.user_id
 
   const postUrl =
     typeof window !== 'undefined'
@@ -395,9 +415,7 @@ function PostCard({ post }: { post: Post }) {
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
 
-    if (error || !commentsData) {
-      return
-    }
+    if (error || !commentsData) return
 
     if (commentsData.length === 0) {
       setComments([])
@@ -501,6 +519,36 @@ function PostCard({ post }: { post: Post }) {
     setTimeout(() => setShareMessage(''), 2000)
   }
 
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm('Delete this post?')
+    if (!confirmDelete) return
+
+    setDeleteLoading(true)
+
+    const { error } = await supabase.from('posts').delete().eq('id', post.id)
+
+    if (error) {
+      alert(`Failed to delete post: ${error.message}`)
+      setDeleteLoading(false)
+      return
+    }
+
+    if (post.image_url) {
+      try {
+        const url = new URL(post.image_url)
+        const pathParts = url.pathname.split('/storage/v1/object/public/posts/')
+        if (pathParts[1]) {
+          await supabase.storage.from('posts').remove([pathParts[1]])
+        }
+      } catch {
+        // ignore storage cleanup URL parsing errors
+      }
+    }
+
+    setDeleteLoading(false)
+    await onPostDeleted()
+  }
+
   return (
     <article className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-3">
@@ -564,6 +612,17 @@ function PostCard({ post }: { post: Post }) {
         >
           Open
         </Link>
+
+        {isOwner && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleteLoading}
+            className="rounded-full bg-red-100 px-4 py-2 text-red-600 disabled:opacity-70"
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        )}
       </div>
 
       {shareMessage && (
