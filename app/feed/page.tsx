@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +24,7 @@ export default function FeedPage() {
 
   const [content, setContent] = useState('')
   const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -32,6 +33,12 @@ export default function FeedPage() {
   useEffect(() => {
     checkUser()
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+    }
+  }, [imagePreview])
 
   const checkUser = async () => {
     const {
@@ -84,6 +91,37 @@ export default function FeedPage() {
     setPosts((data as Post[]) || [])
   }
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    setImage(file)
+
+    if (file) {
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview(previewUrl)
+      setMessage('')
+    } else {
+      setImagePreview(null)
+    }
+  }
+
+  const clearSelectedImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    setImage(null)
+    setImagePreview(null)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handlePost = async () => {
     if (!content.trim() && !image) return
 
@@ -134,8 +172,7 @@ export default function FeedPage() {
     }
 
     setContent('')
-    setImage(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    clearSelectedImage()
     setMessage('Post created.')
     setLoading(false)
     fetchPosts()
@@ -206,14 +243,32 @@ export default function FeedPage() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            onChange={handleImageChange}
             className="hidden"
           />
 
           {image && (
-            <p className="mt-3 text-sm text-gray-600">
-              Selected: {image.name}
-            </p>
+            <div className="mt-4 rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
+              <p className="mb-3 text-sm text-gray-700">
+                Selected: <span className="font-medium">{image.name}</span>
+              </p>
+
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-h-80 w-full rounded-2xl border border-orange-100 object-contain bg-white"
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={clearSelectedImage}
+                className="mt-3 rounded-full border border-red-200 px-4 py-2 text-sm text-red-600"
+              >
+                Remove Photo
+              </button>
+            </div>
           )}
 
           {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
@@ -335,7 +390,9 @@ function PostCard({ post }: { post: Post }) {
         </div>
       </div>
 
-      <p className="mb-4 text-[15px] leading-7 text-gray-700">{post.content}</p>
+      {post.content && (
+        <p className="mb-4 text-[15px] leading-7 text-gray-700">{post.content}</p>
+      )}
 
       {post.image_url && (
         <img
