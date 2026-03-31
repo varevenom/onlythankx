@@ -36,7 +36,9 @@ export default function FeedPage() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview)
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview)
+      }
     }
   }, [imagePreview])
 
@@ -257,7 +259,7 @@ export default function FeedPage() {
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="max-h-80 w-full rounded-2xl border border-orange-100 object-contain bg-white"
+                  className="max-h-80 w-full rounded-2xl border border-orange-100 bg-white object-contain"
                 />
               )}
 
