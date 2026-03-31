@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,7 @@ type Post = {
 
 export default function FeedPage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [content, setContent] = useState('')
   const [image, setImage] = useState<File | null>(null)
@@ -47,13 +48,13 @@ export default function FeedPage() {
   }
 
   const fetchMyProfile = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .select('username')
       .eq('id', userId)
       .single()
 
-    if (!error && data?.username) {
+    if (data?.username) {
       setMyUsername(data.username)
     }
   }
@@ -91,10 +92,9 @@ export default function FeedPage() {
 
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser()
 
-    if (userError || !user) {
+    if (!user) {
       router.push('/login')
       return
     }
@@ -110,16 +110,13 @@ export default function FeedPage() {
         .upload(fileName, image)
 
       if (uploadError) {
-        setMessage('Image upload failed.')
+        setMessage(`Image upload failed: ${uploadError.message}`)
         setLoading(false)
         return
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('posts')
-        .getPublicUrl(fileName)
-
-      imageUrl = publicUrlData.publicUrl
+      const { data } = supabase.storage.from('posts').getPublicUrl(fileName)
+      imageUrl = data.publicUrl
     }
 
     const { error } = await supabase.from('posts').insert([
@@ -131,13 +128,14 @@ export default function FeedPage() {
     ])
 
     if (error) {
-      setMessage(error.message)
+      setMessage(`Post failed: ${error.message}`)
       setLoading(false)
       return
     }
 
     setContent('')
     setImage(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setMessage('Post created.')
     setLoading(false)
     fetchPosts()
@@ -160,9 +158,7 @@ export default function FeedPage() {
             />
             <div>
               <h1 className="text-lg font-bold">OnlyThankx</h1>
-              <p className="text-xs text-gray-500">
-                Share gratitude beautifully
-              </p>
+              <p className="text-xs text-gray-500">Share gratitude beautifully</p>
             </div>
           </div>
 
@@ -207,19 +203,31 @@ export default function FeedPage() {
           />
 
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={(e) => setImage(e.target.files?.[0] || null)}
-            className="mt-3 block w-full text-sm text-gray-600"
+            className="hidden"
           />
+
+          {image && (
+            <p className="mt-3 text-sm text-gray-600">
+              Selected: {image.name}
+            </p>
+          )}
 
           {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-3 text-sm text-gray-500">
-              <button className="rounded-full border px-4 py-2" type="button">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-full border px-4 py-2"
+              >
                 📷 Add Photo
               </button>
+
               <button className="rounded-full border px-4 py-2" type="button">
                 🎥 Add Video
               </button>
