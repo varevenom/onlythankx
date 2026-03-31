@@ -1,0 +1,318 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+
+type Profile = {
+  username: string
+}
+
+type Post = {
+  id: string
+  user_id: string
+  content: string
+  created_at: string
+  profiles: Profile | Profile[] | null
+}
+
+export default function FeedPage() {
+  const router = useRouter()
+  const [content, setContent] = useState('')
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [myUsername, setMyUsername] = useState('yourname')
+
+  useEffect(() => {
+    checkUser()
+  }, [])
+
+  const checkUser = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    fetchMyProfile(user.id)
+    fetchPosts()
+  }
+
+  const fetchMyProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', userId)
+      .single()
+
+    if (data?.username) {
+      setMyUsername(data.username)
+    }
+  }
+
+  const fetchPosts = async () => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(
+        `
+        id,
+        user_id,
+        content,
+        created_at,
+        profiles (
+          username
+        )
+      `
+      )
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error(error.message)
+      return
+    }
+
+    setPosts((data as Post[]) || [])
+  }
+
+  const handlePost = async () => {
+    if (!content.trim()) return
+
+    setLoading(true)
+    setMessage('')
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      router.push('/login')
+      return
+    }
+
+    const { error } = await supabase.from('posts').insert([
+      {
+        user_id: user.id,
+        content: content.trim(),
+      },
+    ])
+
+    if (error) {
+      setMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    setContent('')
+    setMessage('Post created.')
+    setLoading(false)
+    fetchPosts()
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  return (
+    <main className="min-h-screen bg-[#fff8f2] text-gray-900">
+      <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="OnlyThankx"
+              className="h-10 w-10 rounded-xl"
+            />
+            <div>
+              <h1 className="text-lg font-bold">OnlyThankx</h1>
+              <p className="text-xs text-gray-500">
+                Share gratitude beautifully
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm font-medium">
+            <Link href="/" className="text-gray-600">
+              Home
+            </Link>
+            <Link href="/profile" className="text-gray-600">
+              Profile
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg bg-orange-500 px-3 py-2 text-white"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mb-6 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="profile"
+              className="h-12 w-12 rounded-full border border-orange-200 object-cover"
+            />
+            <div>
+              <p className="font-semibold">@{myUsername}</p>
+              <p className="text-sm text-gray-500">
+                What are you thankful for today?
+              </p>
+            </div>
+          </div>
+
+          <textarea
+            placeholder="Share a grateful moment..."
+            className="min-h-[110px] w-full rounded-2xl border border-gray-200 p-4 outline-none"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+
+          {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex gap-3 text-sm text-gray-500">
+              <button className="rounded-full border px-4 py-2" type="button">
+                📷 Add Photo
+              </button>
+              <button className="rounded-full border px-4 py-2" type="button">
+                🎥 Add Video
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePost}
+              className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white"
+            >
+              {loading ? 'Posting...' : 'Post Thanks'}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {posts.length === 0 ? (
+            <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
+              <p className="text-gray-500">
+                No posts yet. Make the first thankful post ✨
+              </p>
+            </div>
+          ) : (
+            posts.map((post) => <PostCard key={post.id} post={post} />)
+          )}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function PostCard({ post }: { post: Post }) {
+  const [thanksCount, setThanksCount] = useState(0)
+  const [hasThanked, setHasThanked] = useState(false)
+
+  useEffect(() => {
+    fetchThanks()
+  }, [])
+
+  const getUsername = () => {
+    if (Array.isArray(post.profiles)) {
+      return post.profiles[0]?.username || 'user'
+    }
+    return post.profiles?.username || 'user'
+  }
+
+  const fetchThanks = async () => {
+    const { count } = await supabase
+      .from('thanks')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', post.id)
+
+    setThanksCount(count || 0)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data } = await supabase
+      .from('thanks')
+      .select('id')
+      .eq('post_id', post.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (data) setHasThanked(true)
+  }
+
+  const handleThanks = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user || hasThanked) return
+
+    const { error } = await supabase.from('thanks').insert([
+      {
+        user_id: user.id,
+        post_id: post.id,
+      },
+    ])
+
+    if (!error) {
+      setThanksCount((prev) => prev + 1)
+      setHasThanked(true)
+    }
+  }
+
+  return (
+    <article className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        <img
+          src="/logo.png"
+          alt="user"
+          className="h-12 w-12 rounded-full border border-orange-200 object-cover"
+        />
+        <div>
+          <p className="font-semibold">@{getUsername()}</p>
+          <p className="text-sm text-gray-500">
+            {new Date(post.created_at).toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      <p className="mb-4 text-[15px] leading-7 text-gray-700">{post.content}</p>
+
+      <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-sm font-medium text-gray-600">
+        <button
+          type="button"
+          onClick={handleThanks}
+          className={`rounded-full px-4 py-2 ${
+            hasThanked ? 'bg-green-100 text-green-700' : 'bg-orange-50'
+          }`}
+        >
+          ✌️ Thanks
+        </button>
+
+        <span>{thanksCount}</span>
+
+        <button className="rounded-full bg-gray-50 px-4 py-2" type="button">
+          Welcome
+        </button>
+
+        <button className="rounded-full bg-gray-50 px-4 py-2" type="button">
+          Happy Share
+        </button>
+      </div>
+    </article>
+  )
+}
