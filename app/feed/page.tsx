@@ -255,7 +255,7 @@ export default function FeedPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-sm">
+          <div className="hidden items-center gap-4 text-sm md:flex">
             <Link href="/" className="text-gray-500 transition hover:text-gray-900">
               Home
             </Link>
@@ -272,7 +272,7 @@ export default function FeedPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-4 py-6">
+      <section className="mx-auto max-w-3xl px-4 py-6 pb-28 md:pb-6">
         <div className="mb-6 rounded-[30px] border border-orange-100 bg-white p-4 shadow-[0_10px_30px_rgba(255,140,90,0.08)]">
           <div className="mb-4 flex items-center gap-3">
             <img
@@ -368,6 +368,40 @@ export default function FeedPage() {
           )}
         </div>
       </section>
+
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-orange-100 bg-white/90 px-3 py-2 backdrop-blur-xl md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+          <Link
+            href="/"
+            className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
+          >
+            🏠
+            <div className="mt-1">Home</div>
+          </Link>
+          <Link
+            href="/feed"
+            className="rounded-2xl bg-orange-50 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+          >
+            🧡
+            <div className="mt-1">Feed</div>
+          </Link>
+          <Link
+            href="/profile"
+            className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
+          >
+            👤
+            <div className="mt-1">Profile</div>
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
+          >
+            🚪
+            <div className="mt-1">Logout</div>
+          </button>
+        </div>
+      </div>
     </main>
   )
 }
@@ -593,6 +627,7 @@ function SexyPostCard({
           await supabase.storage.from('posts').remove([pathParts[1]])
         }
       } catch {
+        // ignore cleanup errors
       }
     }
 
