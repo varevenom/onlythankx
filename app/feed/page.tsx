@@ -234,31 +234,45 @@ export default function FeedPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fff7f4] text-gray-900">
-      <header className="sticky top-0 z-20 border-b border-orange-100/80 bg-white/80 backdrop-blur-xl">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#fff8f5_0%,#fff4ee_100%)] text-gray-900">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-[-120px] top-[-80px] h-72 w-72 rounded-full bg-orange-200/20 blur-3xl" />
+        <div className="absolute right-[-80px] top-24 h-80 w-80 rounded-full bg-amber-200/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-rose-200/10 blur-3xl" />
+      </div>
+
+      <header className="sticky top-0 z-20 border-b border-orange-100/80 bg-white/70 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <img
               src={myAvatar || '/logo.png'}
               alt="OnlyThankx"
-              className="h-11 w-11 rounded-2xl object-cover ring-1 ring-orange-100"
+              className="h-11 w-11 rounded-2xl object-cover ring-1 ring-orange-100 shadow-[0_8px_24px_rgba(255,142,102,0.18)]"
             />
             <div>
-              <h1 className="text-lg font-semibold tracking-tight">OnlyThankx</h1>
+              <h1 className="text-lg font-semibold tracking-tight text-gray-900">
+                OnlyThankx
+              </h1>
               <p className="text-xs text-gray-500">Share gratitude beautifully</p>
             </div>
           </div>
 
-          <div className="hidden items-center gap-4 text-sm md:flex">
-            <Link href="/" className="text-gray-500 transition hover:text-gray-900">
+          <div className="hidden items-center gap-2 text-sm md:flex">
+            <Link
+              href="/"
+              className="rounded-full px-3 py-2 text-gray-500 transition hover:bg-orange-50 hover:text-gray-900"
+            >
               Home
             </Link>
-            <Link href="/profile" className="text-gray-500 transition hover:text-gray-900">
+            <Link
+              href="/profile"
+              className="rounded-full px-3 py-2 text-gray-500 transition hover:bg-orange-50 hover:text-gray-900"
+            >
               Profile
             </Link>
             <button
               onClick={handleLogout}
-              className="rounded-full bg-[#ff8e66] px-4 py-2 font-medium text-white shadow-sm transition hover:scale-[1.02]"
+              className="rounded-full bg-[linear-gradient(135deg,#ff9b76_0%,#ff7f5a_100%)] px-4 py-2 font-medium text-white shadow-[0_10px_25px_rgba(255,127,90,0.28)] transition hover:-translate-y-[1px]"
             >
               Logout
             </button>
@@ -266,93 +280,100 @@ export default function FeedPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-3xl px-4 py-6 pb-28 md:pb-6">
-        <div className="mb-6 rounded-[30px] border border-orange-100 bg-white p-4 shadow-[0_10px_30px_rgba(255,140,90,0.08)]">
-          <div className="mb-4 flex items-center gap-3">
-            <img
-              src={myAvatar || '/logo.png'}
-              alt="profile"
-              className="h-12 w-12 rounded-full object-cover ring-2 ring-orange-100"
-            />
-            <div>
-              <p className="font-semibold tracking-tight">@{myUsername}</p>
-              <p className="text-sm text-gray-500">What are you thankful for today?</p>
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-orange-100 bg-[#fffaf8] p-3">
-            <textarea
-              placeholder={currentPrompt}
-              className="min-h-[120px] w-full resize-none bg-transparent px-2 py-2 text-[15px] leading-7 text-gray-800 outline-none placeholder:text-gray-400"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-
-            {imagePreview && (
-              <div className="mt-2 overflow-hidden rounded-[24px] border border-orange-100 bg-white">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="max-h-[460px] w-full object-contain"
-                />
-                <div className="flex items-center justify-between px-4 py-3">
-                  <p className="truncate text-sm text-gray-500">
-                    Selected: <span className="font-medium text-gray-700">{image?.name}</span>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={clearSelectedImage}
-                    className="rounded-full border border-red-200 px-3 py-1.5 text-sm text-red-500 transition hover:bg-red-50"
-                  >
-                    Remove
-                  </button>
-                </div>
+      <section className="relative mx-auto max-w-3xl px-4 py-6 pb-28 md:pb-8">
+        <div className="mb-6 overflow-hidden rounded-[32px] border border-orange-100/90 bg-white/90 shadow-[0_18px_50px_rgba(255,140,90,0.10)] backdrop-blur-xl">
+          <div className="border-b border-orange-100/80 bg-[linear-gradient(180deg,rgba(255,247,243,0.95)_0%,rgba(255,255,255,0.9)_100%)] p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <img
+                src={myAvatar || '/logo.png'}
+                alt="profile"
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-orange-100 shadow-sm"
+              />
+              <div>
+                <p className="font-semibold tracking-tight text-gray-900">@{myUsername}</p>
+                <p className="text-sm text-gray-500">What are you thankful for today?</p>
               </div>
-            )}
-          </div>
-
-          {message && <p className="mt-3 px-1 text-sm text-gray-500">{message}</p>}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px] hover:shadow-sm"
-              >
-                📷 Add Photo
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-400"
-              >
-                🎥 Add Video
-              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handlePost}
-              disabled={loading}
-              className="rounded-full bg-[#ff8e66] px-5 py-2.5 font-semibold text-white shadow-sm transition hover:scale-[1.02] disabled:opacity-70"
-            >
-              {loading ? 'Posting...' : 'Post Thanks'}
-            </button>
+            <div className="rounded-[26px] border border-orange-100 bg-[#fffaf8] p-3 shadow-inner">
+              <textarea
+                placeholder={currentPrompt}
+                className="min-h-[120px] w-full resize-none bg-transparent px-2 py-2 text-[15px] leading-7 text-gray-800 outline-none placeholder:text-gray-400"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+
+              {imagePreview && (
+                <div className="mt-2 overflow-hidden rounded-[24px] border border-orange-100 bg-white shadow-sm">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="max-h-[460px] w-full object-contain"
+                  />
+                  <div className="flex items-center justify-between gap-3 px-4 py-3">
+                    <p className="truncate text-sm text-gray-500">
+                      Selected:{' '}
+                      <span className="font-medium text-gray-700">{image?.name}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearSelectedImage}
+                      className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-500 transition hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {message && (
+              <p className="mt-3 rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-700">
+                {message}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:-translate-y-[1px] hover:bg-orange-50"
+                >
+                  📷 Add Photo
+                </button>
+
+                <button
+                  type="button"
+                  className="rounded-full border border-orange-100 bg-white px-4 py-2 text-sm font-medium text-gray-400 shadow-sm"
+                >
+                  🎥 Add Video
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handlePost}
+                disabled={loading}
+                className="rounded-full bg-[linear-gradient(135deg,#ff9b76_0%,#ff7f5a_100%)] px-5 py-2.5 font-semibold text-white shadow-[0_12px_28px_rgba(255,127,90,0.30)] transition hover:-translate-y-[1px] disabled:opacity-70"
+              >
+                {loading ? 'Posting...' : 'Post Thanks'}
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="space-y-5">
           {posts.length === 0 ? (
-            <div className="rounded-[28px] border border-orange-100 bg-white p-6 shadow-[0_10px_30px_rgba(255,140,90,0.06)]">
+            <div className="rounded-[30px] border border-orange-100 bg-white/90 p-6 shadow-[0_16px_40px_rgba(255,140,90,0.08)]">
               <p className="text-gray-500">No posts yet. Be the first spark ✨</p>
             </div>
           ) : (
@@ -361,7 +382,7 @@ export default function FeedPage() {
         </div>
       </section>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-orange-100 bg-white/90 px-3 py-2 backdrop-blur-xl md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-orange-100 bg-white/90 px-3 py-2 backdrop-blur-2xl md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
           <Link
             href="/"
@@ -372,7 +393,7 @@ export default function FeedPage() {
           </Link>
           <Link
             href="/feed"
-            className="rounded-2xl bg-orange-50 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+            className="rounded-2xl bg-[linear-gradient(180deg,#fff2ec_0%,#ffe8dd_100%)] px-3 py-2 text-center text-xs font-semibold text-gray-900 shadow-sm"
           >
             🧡
             <div className="mt-1">Feed</div>
@@ -618,16 +639,16 @@ function FeedCard({
   const avatarUrl = post.profiles?.avatar_url || '/logo.png'
 
   return (
-    <article className="overflow-hidden rounded-[30px] border border-orange-100 bg-white shadow-[0_10px_30px_rgba(255,140,90,0.08)] transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_16px_40px_rgba(255,140,90,0.12)]">
-      <div className="p-5">
+    <article className="group overflow-hidden rounded-[32px] border border-orange-100/90 bg-white/92 shadow-[0_16px_45px_rgba(255,140,90,0.10)] backdrop-blur-xl transition duration-300 hover:-translate-y-[2px] hover:shadow-[0_24px_60px_rgba(255,140,90,0.14)]">
+      <div className="border-b border-orange-100/80 bg-[linear-gradient(180deg,rgba(255,250,248,1)_0%,rgba(255,255,255,0.95)_100%)] p-5">
         <div className="mb-4 flex items-center gap-3">
           <img
             src={avatarUrl}
             alt="user"
-            className="h-11 w-11 rounded-full object-cover ring-2 ring-orange-100"
+            className="h-11 w-11 rounded-full object-cover ring-2 ring-orange-100 shadow-sm"
           />
-          <div>
-            <p className="font-semibold tracking-tight">@{username}</p>
+          <div className="min-w-0">
+            <p className="truncate font-semibold tracking-tight text-gray-900">@{username}</p>
             <p className="text-xs text-gray-400">
               {new Date(post.created_at).toLocaleString()}
             </p>
@@ -635,7 +656,7 @@ function FeedCard({
         </div>
 
         {post.content && (
-          <p className="mb-4 whitespace-pre-wrap text-[15px] leading-7 text-gray-700">
+          <p className="whitespace-pre-wrap text-[15px] leading-7 text-gray-700">
             {post.content}
           </p>
         )}
@@ -658,8 +679,8 @@ function FeedCard({
             onClick={handleThanks}
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               hasThanked
-                ? 'bg-green-100 text-green-700'
-                : 'bg-orange-50 text-gray-700 hover:-translate-y-[1px]'
+                ? 'bg-green-100 text-green-700 shadow-sm'
+                : 'bg-orange-50 text-gray-700 hover:-translate-y-[1px] hover:bg-orange-100'
             }`}
           >
             ✌️ Thanks
@@ -670,7 +691,7 @@ function FeedCard({
           <button
             type="button"
             onClick={() => setShowComments((prev) => !prev)}
-            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px]"
+            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px] hover:bg-gray-100"
           >
             Welcome
           </button>
@@ -678,14 +699,14 @@ function FeedCard({
           <button
             type="button"
             onClick={handleShare}
-            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px]"
+            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px] hover:bg-gray-100"
           >
             Happy Share
           </button>
 
           <Link
             href={`/post/${post.id}`}
-            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px]"
+            className="rounded-full bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 transition hover:-translate-y-[1px] hover:bg-gray-100"
           >
             Open
           </Link>
@@ -693,22 +714,26 @@ function FeedCard({
           <DeleteButton postUserId={post.user_id} onDelete={handleDelete} loading={deleteLoading} />
         </div>
 
-        {shareMessage && <p className="mt-3 text-sm text-orange-500">{shareMessage}</p>}
+        {shareMessage && (
+          <p className="mt-3 rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-600">
+            {shareMessage}
+          </p>
+        )}
 
         {showComments && (
-          <div className="mt-4 rounded-[24px] border border-orange-100 bg-[#fffaf8] p-4">
+          <div className="mt-4 rounded-[24px] border border-orange-100 bg-[linear-gradient(180deg,#fffaf8_0%,#fff7f4_100%)] p-4">
             <div className="mb-4 flex gap-2">
               <input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Write a welcome comment..."
-                className="flex-1 rounded-full border border-orange-100 bg-white px-4 py-3 text-sm outline-none"
+                className="flex-1 rounded-full border border-orange-100 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-orange-200 focus:ring-2 focus:ring-orange-100"
               />
               <button
                 type="button"
                 onClick={handleComment}
                 disabled={commentLoading}
-                className="rounded-full bg-[#ff8e66] px-4 py-3 text-sm font-medium text-white disabled:opacity-70"
+                className="rounded-full bg-[linear-gradient(135deg,#ff9b76_0%,#ff7f5a_100%)] px-4 py-3 text-sm font-medium text-white shadow-[0_10px_22px_rgba(255,127,90,0.24)] disabled:opacity-70"
               >
                 {commentLoading ? 'Posting...' : 'Comment'}
               </button>
@@ -721,7 +746,7 @@ function FeedCard({
                 comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className="rounded-[20px] border border-orange-100 bg-white p-3"
+                    className="rounded-[22px] border border-orange-100 bg-white p-3 shadow-[0_6px_20px_rgba(255,140,90,0.05)]"
                   >
                     <div className="mb-2 flex items-center gap-2">
                       <img
@@ -729,8 +754,8 @@ function FeedCard({
                         alt="comment user"
                         className="h-8 w-8 rounded-full object-cover"
                       />
-                      <div>
-                        <p className="text-sm font-semibold">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
                           @{comment.profiles?.username || 'user'}
                         </p>
                         <p className="text-xs text-gray-400">
@@ -780,7 +805,7 @@ function DeleteButton({
       type="button"
       onClick={onDelete}
       disabled={loading}
-      className="rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-500 transition hover:-translate-y-[1px] disabled:opacity-70"
+      className="rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-500 transition hover:-translate-y-[1px] hover:bg-red-100 disabled:opacity-70"
     >
       {loading ? 'Deleting...' : 'Delete'}
     </button>
