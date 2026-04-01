@@ -1,5 +1,4 @@
 import './globals.css'
-import Script from 'next/script'
 
 export const metadata = {
   title: 'OnlyThankx',
@@ -14,12 +13,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
+        {/* AdSense Verification Script */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5294118103701735"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        ></script>
       </head>
 
       <body>{children}</body>
