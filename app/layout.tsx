@@ -1,8 +1,7 @@
 import './globals.css'
-import type { Metadata } from 'next'
 import Script from 'next/script'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'OnlyThankx',
   description: 'Share gratitude beautifully',
 }
@@ -15,7 +14,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google AdSense */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5294118103701735"
@@ -24,9 +22,7 @@ export default function RootLayout({
         />
       </head>
 
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
