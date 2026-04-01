@@ -4,17 +4,15 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://onlythankx.com'),
   title: 'OnlyThankx',
-  description:
-    'Share gratitude. Feel connected. A social space for appreciation, positivity, and real moments that matter.',
+  description: 'Share gratitude. Feel connected.',
   openGraph: {
     title: 'OnlyThankx',
-    description:
-      'Share gratitude. Feel connected. A social space for appreciation, positivity, and real moments that matter.',
+    description: 'Share gratitude. Feel connected.',
     url: 'https://onlythankx.com',
     siteName: 'OnlyThankx',
     images: [
       {
-        url: '/og-image.png',
+        url: 'https://onlythankx.com/preview.png',
         width: 1200,
         height: 630,
         alt: 'OnlyThankx',
@@ -26,9 +24,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'OnlyThankx',
-    description:
-      'Share gratitude. Feel connected. A social space for appreciation, positivity, and real moments that matter.',
-    images: ['/og-image.png'],
+    description: 'Share gratitude. Feel connected.',
+    images: ['https://onlythankx.com/preview.png'],
   },
   icons: {
     icon: '/logo.png',
@@ -39,9 +36,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="en">
       <body>{children}</body>
