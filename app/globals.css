@@ -1,10 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* =========================
-   ROOT THEME
-========================= */
+@import "tailwindcss";
 
 html {
   scroll-behavior: smooth;
@@ -19,10 +13,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* =========================
-   GLOBAL RESET
-========================= */
-
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -33,10 +23,6 @@ img {
   height: auto;
   display: block;
 }
-
-/* =========================
-   SCROLLBAR (CLEAN)
-========================= */
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -55,18 +41,10 @@ img {
   background: rgba(255, 140, 90, 0.45);
 }
 
-/* =========================
-   TEXT SELECTION
-========================= */
-
 ::selection {
   background: rgba(255, 140, 90, 0.22);
   color: #111;
 }
-
-/* =========================
-   INPUTS / TEXTAREA
-========================= */
 
 input,
 textarea {
@@ -78,10 +56,6 @@ textarea::placeholder {
   color: #9ca3af;
 }
 
-/* =========================
-   BUTTON BASE STYLE
-========================= */
-
 button {
   transition: all 0.2s ease;
 }
@@ -90,98 +64,7 @@ button:active {
   transform: scale(0.97);
 }
 
-/* =========================
-   GLASS EFFECT (OPTIONAL USE)
-========================= */
-
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-/* =========================
-   CARD EFFECT
-========================= */
-
-.card {
-  border-radius: 28px;
-  border: 1px solid rgba(255, 140, 90, 0.15);
-  background: #ffffff;
-  box-shadow: 0 10px 30px rgba(255, 140, 90, 0.08);
-}
-
-/* =========================
-   HOVER LIFT EFFECT
-========================= */
-
-.hover-lift {
-  transition: all 0.2s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 40px rgba(255, 140, 90, 0.12);
-}
-
-/* =========================
-   FADE-IN ANIMATION
-========================= */
-
-.fade-in {
-  animation: fadeIn 0.5s ease forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* =========================
-   MOBILE SAFE SPACING
-========================= */
-
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* =========================
-   LINK CLEANUP
-========================= */
-
 a {
   text-decoration: none;
   color: inherit;
-}
-
-/* =========================
-   SOFT SHADOW UTILITY
-========================= */
-
-.soft-shadow {
-  box-shadow: 0 20px 60px rgba(255, 140, 90, 0.12);
-}
-
-/* =========================
-   ORANGE GLOW BUTTON
-========================= */
-
-.btn-primary {
-  background: #ff8e66;
-  color: white;
-  border-radius: 999px;
-  padding: 10px 18px;
-  font-weight: 600;
-  box-shadow: 0 10px 30px rgba(255, 140, 90, 0.25);
-}
-
-.btn-primary:hover {
-  transform: scale(1.02);
-  box-shadow: 0 14px 40px rgba(255, 140, 90, 0.35);
 }
