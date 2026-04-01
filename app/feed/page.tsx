@@ -50,6 +50,7 @@ export default function FeedPage() {
   const [myUsername, setMyUsername] = useState('yourname')
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const [promptIndex, setPromptIndex] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   const currentPrompt = useMemo(() => prompts[promptIndex], [promptIndex])
 
@@ -62,7 +63,8 @@ export default function FeedPage() {
   }, [])
 
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null
+    let postsChannel: ReturnType<typeof supabase.channel> | null = null
+    let notificationsChannel: ReturnType<typeof supabase.channel> | null = null
 
     const init = async () => {
       const {
@@ -76,8 +78,9 @@ export default function FeedPage() {
 
       await fetchMyProfile(user.id)
       await fetchPosts()
+      await fetchUnreadNotifications(user.id)
 
-      channel = supabase
+      postsChannel = supabase
         .channel('realtime-posts-sexy')
         .on(
           'postgres_changes',
@@ -91,12 +94,29 @@ export default function FeedPage() {
           }
         )
         .subscribe()
+
+      notificationsChannel = supabase
+        .channel('realtime-bell')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          async () => {
+            await fetchUnreadNotifications(user.id)
+          }
+        )
+        .subscribe()
     }
 
     init()
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
+      if (postsChannel) supabase.removeChannel(postsChannel)
+      if (notificationsChannel) supabase.removeChannel(notificationsChannel)
       if (imagePreview) URL.revokeObjectURL(imagePreview)
     }
   }, [])
@@ -112,6 +132,16 @@ export default function FeedPage() {
       setMyUsername(data.username || 'yourname')
       setMyAvatar(data.avatar_url || null)
     }
+  }
+
+  const fetchUnreadNotifications = async (userId: string) => {
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+
+    setUnreadNotifications(count || 0)
   }
 
   const fetchPosts = async () => {
@@ -262,6 +292,16 @@ export default function FeedPage() {
             <Link href="/profile" className="text-gray-500 transition hover:text-gray-900">
               Profile
             </Link>
+
+            <Link href="/notifications" className="relative text-gray-500 transition hover:text-gray-900">
+              🔔
+              {unreadNotifications > 0 && (
+                <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ff8e66] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {unreadNotifications}
+                </span>
+              )}
+            </Link>
+
             <button
               onClick={handleLogout}
               className="rounded-full bg-[#ff8e66] px-4 py-2 font-medium text-white shadow-sm transition hover:scale-[1.02]"
@@ -363,14 +403,19 @@ export default function FeedPage() {
             </div>
           ) : (
             posts.map((post) => (
-              <SexyPostCard key={post.id} post={post} onPostDeleted={fetchPosts} />
+              <SexyPostCard
+                key={post.id}
+                post={post}
+                onPostDeleted={fetchPosts}
+                currentUsername={myUsername}
+              />
             ))
           )}
         </div>
       </section>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-orange-100 bg-white/90 px-3 py-2 backdrop-blur-xl md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
           <Link
             href="/"
             className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
@@ -384,6 +429,18 @@ export default function FeedPage() {
           >
             🧡
             <div className="mt-1">Feed</div>
+          </Link>
+          <Link
+            href="/notifications"
+            className="relative rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
+          >
+            🔔
+            {unreadNotifications > 0 && (
+              <span className="absolute right-3 top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-[#ff8e66] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {unreadNotifications}
+              </span>
+            )}
+            <div className="mt-1">Alerts</div>
           </Link>
           <Link
             href="/profile"
@@ -409,9 +466,11 @@ export default function FeedPage() {
 function SexyPostCard({
   post,
   onPostDeleted,
+  currentUsername,
 }: {
   post: Post
   onPostDeleted: () => Promise<void>
+  currentUsername: string
 }) {
   const [thanksCount, setThanksCount] = useState(0)
   const [hasThanked, setHasThanked] = useState(false)
@@ -524,6 +583,26 @@ function SexyPostCard({
     setComments(merged)
   }
 
+  const createNotification = async (type: 'thanks' | 'comment', postOwnerId: string, actorId: string) => {
+    if (!postOwnerId || !actorId || postOwnerId === actorId) return
+
+    const message =
+      type === 'thanks'
+        ? `${currentUsername} thanked your post ✌️`
+        : `${currentUsername} welcomed your post 💬`
+
+    await supabase.from('notifications').insert([
+      {
+        user_id: postOwnerId,
+        actor_id: actorId,
+        post_id: post.id,
+        type,
+        message,
+        is_read: false,
+      },
+    ])
+  }
+
   const handleThanks = async () => {
     const {
       data: { user },
@@ -541,6 +620,7 @@ function SexyPostCard({
     if (!error) {
       setHasThanked(true)
       setThanksCount((prev) => prev + 1)
+      await createNotification('thanks', post.user_id, user.id)
     }
   }
 
@@ -570,6 +650,7 @@ function SexyPostCard({
       setCommentText('')
       setShowComments(true)
       await fetchComments()
+      await createNotification('comment', post.user_id, user.id)
     }
 
     setCommentLoading(false)
@@ -627,7 +708,6 @@ function SexyPostCard({
           await supabase.storage.from('posts').remove([pathParts[1]])
         }
       } catch {
-        // ignore cleanup errors
       }
     }
 
