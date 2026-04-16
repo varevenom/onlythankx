@@ -21,42 +21,76 @@ export default function OnboardingPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
+    let mounted = true
+
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
 
-      if (!user) {
-        router.push('/login')
-        return
+        if (userError) {
+          if (mounted) {
+            setMessage(userError.message)
+            setLoading(false)
+          }
+          return
+        }
+
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        if (!mounted) return
+
+        setUserId(user.id)
+        setEmail(user.email || '')
+        setUsername(user.email?.split('@')[0] || '')
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, bio, avatar_url, onboarding_completed')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (error) {
+          console.error('Profile fetch error:', error.message)
+          if (mounted) {
+            setMessage('')
+            setLoading(false)
+          }
+          return
+        }
+
+        if (data?.onboarding_completed) {
+          router.push('/feed')
+          return
+        }
+
+        if (!mounted) return
+
+        setUsername(data?.username || user.email?.split('@')[0] || '')
+        setBio(data?.bio || '')
+        setAvatarUrl(data?.avatar_url || null)
+        setLoading(false)
+      } catch (err) {
+        console.error('Onboarding init error:', err)
+        if (mounted) {
+          setMessage('Could not load onboarding. Please refresh and try again.')
+          setLoading(false)
+        }
       }
-
-      setUserId(user.id)
-      setEmail(user.email || '')
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('username, bio, avatar_url, onboarding_completed')
-        .eq('id', user.id)
-        .single()
-
-      if (data?.onboarding_completed) {
-        router.push('/feed')
-        return
-      }
-
-      setUsername(data?.username || user.email?.split('@')[0] || '')
-      setBio(data?.bio || '')
-      setAvatarUrl(data?.avatar_url || null)
-      setLoading(false)
     }
 
     init()
 
     return () => {
+      mounted = false
       if (avatarPreview) URL.revokeObjectURL(avatarPreview)
     }
-  }, [router, avatarPreview])
+  }, [router])
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -96,14 +130,25 @@ export default function OnboardingPage() {
       return
     }
 
+    if (!userId) {
+      setMessage('No user session found. Please log in again.')
+      return
+    }
+
     setSaving(true)
     setMessage('')
 
     try {
-      await supabase.from('profiles').upsert({
+      const { error } = await supabase.from('profiles').upsert({
         id: userId,
         username: username.trim().toLowerCase(),
       })
+
+      if (error) {
+        setMessage(error.message)
+        setSaving(false)
+        return
+      }
 
       setStep(2)
     } catch {
@@ -114,6 +159,11 @@ export default function OnboardingPage() {
   }
 
   const finishOnboarding = async () => {
+    if (!userId) {
+      setMessage('No user session found. Please log in again.')
+      return
+    }
+
     setSaving(true)
     setMessage('')
 
@@ -148,6 +198,7 @@ export default function OnboardingPage() {
       <main className="min-h-screen bg-[#fff7f4] px-4 py-10">
         <div className="mx-auto max-w-2xl rounded-[32px] border border-orange-100 bg-white p-8 shadow-[0_20px_60px_rgba(255,140,90,0.08)]">
           <p className="text-gray-500">Preparing your welcome flow...</p>
+          {message && <p className="mt-3 text-sm text-red-500">{message}</p>}
         </div>
       </main>
     )
