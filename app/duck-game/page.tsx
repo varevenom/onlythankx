@@ -21,31 +21,33 @@ type Car = {
 const GAME_WIDTH = 390
 const GAME_HEIGHT = 780
 
-const START_POS = { x: 190, y: 700 }
+const START_POS: Vec = { x: 178, y: 690 }
+
 const DUCK_SIZE = 34
 const DUCKLING_SIZE = 22
 
-const ROAD_TOP = 170
+const POND_TOP = 28
+const POND_HEIGHT = 100
+const ROAD_TOP = 160
 const ROAD_BOTTOM = 560
-const POND_TOP = 36
-const POND_HEIGHT = 90
 
 const LANES = [
-  { y: 205, dir: 1, speed: 2.2 },
-  { y: 265, dir: -1, speed: 2.8 },
-  { y: 325, dir: 1, speed: 3.4 },
-  { y: 385, dir: -1, speed: 3.8 },
-  { y: 445, dir: 1, speed: 4.4 },
-  { y: 505, dir: -1, speed: 5.0 },
+  { y: 190, dir: 1 as 1 | -1, speed: 2.1 },
+  { y: 250, dir: -1 as 1 | -1, speed: 2.7 },
+  { y: 310, dir: 1 as 1 | -1, speed: 3.2 },
+  { y: 370, dir: -1 as 1 | -1, speed: 3.8 },
+  { y: 430, dir: 1 as 1 | -1, speed: 4.2 },
+  { y: 490, dir: -1 as 1 | -1, speed: 4.8 },
 ]
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value))
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
+}
 
-const rectsOverlap = (
+function rectsOverlap(
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number }
-) => {
+) {
   return (
     a.x < b.x + b.width &&
     a.x + a.width > b.x &&
@@ -54,28 +56,33 @@ const rectsOverlap = (
   )
 }
 
+function createDucklings(start: Vec): Vec[] {
+  return [
+    { x: start.x - 18, y: start.y + 16 },
+    { x: start.x - 36, y: start.y + 32 },
+    { x: start.x - 54, y: start.y + 48 },
+    { x: start.x - 72, y: start.y + 64 },
+    { x: start.x - 90, y: start.y + 80 },
+  ]
+}
+
 export default function DuckGamePage() {
-  const [mounted, setMounted] = useState(false)
-  const [score, setScore] = useState(0)
-  const [savedFamilies, setSavedFamilies] = useState(0)
-  const [gameOver, setGameOver] = useState(false)
-  const [winFlash, setWinFlash] = useState(false)
+  const [score, setScore] = useState<number>(0)
+  const [savedFamilies, setSavedFamilies] = useState<number>(0)
+  const [gameOver, setGameOver] = useState<boolean>(false)
+  const [winFlash, setWinFlash] = useState<boolean>(false)
 
   const [mamaPos, setMamaPos] = useState<Vec>(START_POS)
-  const [ducklings, setDucklings] = useState<Vec[]>([
-    { x: START_POS.x - 18, y: START_POS.y + 20 },
-    { x: START_POS.x - 36, y: START_POS.y + 36 },
-    { x: START_POS.x - 54, y: START_POS.y + 52 },
-  ])
+  const [ducklings, setDucklings] = useState<Vec[]>(createDucklings(START_POS))
   const [cars, setCars] = useState<Car[]>([])
 
   const mamaRef = useRef<Vec>(START_POS)
-  const ducklingsRef = useRef<Vec[]>([
-    { x: START_POS.x - 18, y: START_POS.y + 20 },
-    { x: START_POS.x - 36, y: START_POS.y + 36 },
-    { x: START_POS.x - 54, y: START_POS.y + 52 },
-  ])
+  const ducklingsRef = useRef<Vec[]>(createDucklings(START_POS))
   const carsRef = useRef<Car[]>([])
+  const spawnTimerRef = useRef<number>(0)
+  const animRef = useRef<number | null>(null)
+  const carIdRef = useRef<number>(1)
+  const lastTimeRef = useRef<number>(0)
 
   const keysRef = useRef({
     up: false,
@@ -84,76 +91,64 @@ export default function DuckGamePage() {
     right: false,
   })
 
-  const pointerRef = useRef({
+  const mobileRef = useRef({
     up: false,
     down: false,
     left: false,
     right: false,
   })
 
-  const animationRef = useRef<number | null>(null)
-  const spawnRef = useRef<number>(0)
-  const carIdRef = useRef(1)
-  const lastTimeRef = useRef<number>(0)
-
   const level = useMemo(() => {
     return Math.min(10, 1 + Math.floor(savedFamilies / 2))
   }, [savedFamilies])
 
-  const currentSpeed = useMemo(() => {
-    return 2.5 + level * 0.22
+  const moveSpeed = useMemo(() => {
+    return 2.4 + level * 0.18
   }, [level])
 
   const spawnInterval = useMemo(() => {
-    return Math.max(420, 1000 - level * 55)
+    return Math.max(380, 1050 - level * 60)
   }, [level])
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   const resetPositions = () => {
-    const newMama = { ...START_POS }
-    const newDucklings = [
-      { x: START_POS.x - 18, y: START_POS.y + 20 },
-      { x: START_POS.x - 36, y: START_POS.y + 36 },
-      { x: START_POS.x - 54, y: START_POS.y + 52 },
-    ]
+    const mama = { ...START_POS }
+    const babies = createDucklings(START_POS)
 
-    mamaRef.current = newMama
-    ducklingsRef.current = newDucklings
-    setMamaPos(newMama)
-    setDucklings(newDucklings)
+    mamaRef.current = mama
+    ducklingsRef.current = babies
+
+    setMamaPos(mama)
+    setDucklings(babies)
   }
 
   const restartGame = () => {
     setGameOver(false)
+    setWinFlash(false)
     setScore(0)
     setSavedFamilies(0)
-    setWinFlash(false)
     setCars([])
     carsRef.current = []
+    spawnTimerRef.current = 0
     carIdRef.current = 1
-    spawnRef.current = 0
+    lastTimeRef.current = 0
     resetPositions()
   }
 
   const spawnCar = () => {
     const lane = LANES[Math.floor(Math.random() * LANES.length)]
-    const isBig = Math.random() > 0.72
-    const width = isBig ? 72 : 56
-    const height = isBig ? 34 : 30
-    const emoji = isBig ? '🚚' : Math.random() > 0.5 ? '🚗' : '🚙'
+    const isTruck = Math.random() > 0.72
+    const width = isTruck ? 76 : 58
+    const height = isTruck ? 36 : 30
 
     const car: Car = {
       id: carIdRef.current++,
-      x: lane.dir === 1 ? -width - 10 : GAME_WIDTH + 10,
+      x: lane.dir === 1 ? -width - 12 : GAME_WIDTH + 12,
       y: lane.y,
       width,
       height,
-      speed: lane.speed + Math.random() * 1.1 + level * 0.12,
-      direction: lane.dir as 1 | -1,
-      emoji,
+      speed: lane.speed + Math.random() * 1.8 + level * 0.25,
+      direction: lane.dir,
+      emoji: isTruck ? '🚚' : Math.random() > 0.5 ? '🚗' : '🚙',
     }
 
     carsRef.current = [...carsRef.current, car]
@@ -161,87 +156,87 @@ export default function DuckGamePage() {
   }
 
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') keysRef.current.up = true
-      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') keysRef.current.down = true
-      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keysRef.current.left = true
-      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keysRef.current.right = true
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase()
+      if (key === 'arrowup' || key === 'w') keysRef.current.up = true
+      if (key === 'arrowdown' || key === 's') keysRef.current.down = true
+      if (key === 'arrowleft' || key === 'a') keysRef.current.left = true
+      if (key === 'arrowright' || key === 'd') keysRef.current.right = true
     }
 
-    const up = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') keysRef.current.up = false
-      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') keysRef.current.down = false
-      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keysRef.current.left = false
-      if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keysRef.current.right = false
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase()
+      if (key === 'arrowup' || key === 'w') keysRef.current.up = false
+      if (key === 'arrowdown' || key === 's') keysRef.current.down = false
+      if (key === 'arrowleft' || key === 'a') keysRef.current.left = false
+      if (key === 'arrowright' || key === 'd') keysRef.current.right = false
     }
 
-    window.addEventListener('keydown', down)
-    window.addEventListener('keyup', up)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
 
     return () => {
-      window.removeEventListener('keydown', down)
-      window.removeEventListener('keyup', up)
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
     }
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
-
     const loop = (time: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = time
       const delta = Math.min(32, time - lastTimeRef.current)
       lastTimeRef.current = time
 
       if (!gameOver) {
-        const inputUp = keysRef.current.up || pointerRef.current.up
-        const inputDown = keysRef.current.down || pointerRef.current.down
-        const inputLeft = keysRef.current.left || pointerRef.current.left
-        const inputRight = keysRef.current.right || pointerRef.current.right
+        const up = keysRef.current.up || mobileRef.current.up
+        const down = keysRef.current.down || mobileRef.current.down
+        const left = keysRef.current.left || mobileRef.current.left
+        const right = keysRef.current.right || mobileRef.current.right
 
         let dx = 0
         let dy = 0
 
-        if (inputUp) dy -= currentSpeed
-        if (inputDown) dy += currentSpeed
-        if (inputLeft) dx -= currentSpeed
-        if (inputRight) dx += currentSpeed
+        if (up) dy -= moveSpeed
+        if (down) dy += moveSpeed
+        if (left) dx -= moveSpeed
+        if (right) dx += moveSpeed
 
         if (dx !== 0 && dy !== 0) {
           dx *= 0.72
           dy *= 0.72
         }
 
-        const nextMama = {
-          x: clamp(mamaRef.current.x + dx, 6, GAME_WIDTH - DUCK_SIZE - 6),
-          y: clamp(mamaRef.current.y + dy, 6, GAME_HEIGHT - DUCK_SIZE - 6),
+        const nextMama: Vec = {
+          x: clamp(mamaRef.current.x + dx, 8, GAME_WIDTH - DUCK_SIZE - 8),
+          y: clamp(mamaRef.current.y + dy, 8, GAME_HEIGHT - DUCK_SIZE - 8),
         }
 
         mamaRef.current = nextMama
 
-        const nextDucklings = ducklingsRef.current.map((duck, i) => {
-          const leader = i === 0 ? mamaRef.current : ducklingsRef.current[i - 1]
+        const nextDucklings = ducklingsRef.current.map((duck, index) => {
+          const leader = index === 0 ? nextMama : ducklingsRef.current[index - 1]
           return {
-            x: duck.x + (leader.x - duck.x) * 0.13,
-            y: duck.y + (leader.y - duck.y) * 0.13,
+            x: duck.x + (leader.x - duck.x) * 0.14,
+            y: duck.y + (leader.y - duck.y) * 0.14,
           }
         })
 
         ducklingsRef.current = nextDucklings
 
-        spawnRef.current += delta
-        if (spawnRef.current >= spawnInterval) {
-          spawnRef.current = 0
+        spawnTimerRef.current += delta
+        if (spawnTimerRef.current >= spawnInterval) {
+          spawnTimerRef.current = 0
           spawnCar()
         }
 
-        const updatedCars = carsRef.current
+        const movedCars = carsRef.current
           .map((car) => ({
             ...car,
             x: car.x + car.speed * car.direction,
           }))
-          .filter((car) => car.x > -160 && car.x < GAME_WIDTH + 160)
+          .filter((car) => car.x > -170 && car.x < GAME_WIDTH + 170)
 
-        carsRef.current = updatedCars
+        carsRef.current = movedCars
 
         const mamaHitbox = {
           x: nextMama.x + 6,
@@ -250,7 +245,7 @@ export default function DuckGamePage() {
           height: 20,
         }
 
-        const hit = updatedCars.some((car) =>
+        const hit = movedCars.some((car) =>
           rectsOverlap(mamaHitbox, {
             x: car.x,
             y: car.y,
@@ -267,34 +262,39 @@ export default function DuckGamePage() {
           setScore((prev) => prev + 100)
           setSavedFamilies((prev) => prev + 1)
           setWinFlash(true)
-          resetPositions()
-          setTimeout(() => setWinFlash(false), 450)
+
+          setTimeout(() => {
+            resetPositions()
+            setWinFlash(false)
+          }, 280)
         }
 
-        setMamaPos({ ...mamaRef.current })
-        setDucklings([...ducklingsRef.current])
-        setCars([...carsRef.current])
+        setMamaPos({ ...nextMama })
+        setDucklings([...nextDucklings])
+        setCars([...movedCars])
       }
 
-      animationRef.current = requestAnimationFrame(loop)
+      animRef.current = window.requestAnimationFrame(loop)
     }
 
-    animationRef.current = requestAnimationFrame(loop)
+    animRef.current = window.requestAnimationFrame(loop)
 
     return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      if (animRef.current !== null) {
+        window.cancelAnimationFrame(animRef.current)
+      }
     }
-  }, [mounted, gameOver, currentSpeed, spawnInterval])
+  }, [gameOver, moveSpeed, spawnInterval])
 
   const press = (dir: 'up' | 'down' | 'left' | 'right', value: boolean) => {
-    pointerRef.current[dir] = value
+    mobileRef.current[dir] = value
   }
 
-  const buttonBase =
-    'select-none flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-200 bg-white/90 text-2xl shadow-[0_10px_25px_rgba(255,145,90,0.18)] active:scale-95'
+  const buttonClass =
+    'flex h-16 w-16 select-none items-center justify-center rounded-2xl border border-orange-200 bg-white/90 text-2xl shadow-[0_10px_25px_rgba(255,145,90,0.18)] active:scale-95'
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff7ef_0%,#ffe7d6_45%,#ffd6bd_100%)] px-3 py-4 text-[#402316]">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff7ef_0%,#ffe9d8_40%,#ffd9c2_100%)] px-3 py-4 text-[#402316]">
       <div className="mx-auto flex max-w-[430px] flex-col items-center">
         <div className="mb-3 w-full rounded-[28px] border border-white/60 bg-white/75 p-4 shadow-[0_18px_45px_rgba(255,140,90,0.18)] backdrop-blur">
           <div className="flex items-start justify-between gap-3">
@@ -303,9 +303,11 @@ export default function DuckGamePage() {
                 🦆 Duck Pond Dash
               </h1>
               <p className="mt-1 text-sm text-[#7b4a34]">
-                Help mama duck guide the babies across the wild road into the pond.
+                Help mama duck guide the babies across the busy road into the
+                pond.
               </p>
             </div>
+
             <button
               onClick={restartGame}
               className="rounded-2xl bg-[#ff8f5a] px-4 py-2 text-sm font-bold text-white shadow-[0_10px_24px_rgba(255,143,90,0.35)] active:scale-95"
@@ -316,15 +318,23 @@ export default function DuckGamePage() {
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="rounded-2xl bg-[#fff4ee] p-3">
-              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">Score</div>
+              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">
+                Score
+              </div>
               <div className="text-xl font-extrabold">{score}</div>
             </div>
+
             <div className="rounded-2xl bg-[#fff4ee] p-3">
-              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">Saved</div>
+              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">
+                Saved
+              </div>
               <div className="text-xl font-extrabold">{savedFamilies}</div>
             </div>
+
             <div className="rounded-2xl bg-[#fff4ee] p-3">
-              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">Level</div>
+              <div className="text-xs uppercase tracking-wide text-[#9c6b55]">
+                Level
+              </div>
               <div className="text-xl font-extrabold">{level}</div>
             </div>
           </div>
@@ -336,7 +346,7 @@ export default function DuckGamePage() {
           }`}
           style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}
         >
-          <div className="absolute inset-0 bg-[#f8d9ac]" />
+          <div className="absolute inset-0 bg-[#f4ddb4]" />
 
           <div
             className="absolute left-0 right-0 rounded-b-[26px] border-b-4 border-blue-300 bg-[linear-gradient(180deg,#7dd3fc_0%,#38bdf8_100%)]"
@@ -349,42 +359,44 @@ export default function DuckGamePage() {
             </div>
           </div>
 
+          <div className="absolute left-0 right-0 top-[128px] h-10 bg-[#88c56a]" />
+
           <div
-            className="absolute left-0 right-0 bg-[#4b5563]"
+            className="absolute left-0 right-0 bg-[#404756]"
             style={{ top: ROAD_TOP, height: ROAD_BOTTOM - ROAD_TOP }}
           >
-            {LANES.map((lane, i) => (
+            {LANES.map((lane, index) => (
               <div
-                key={i}
-                className="absolute left-0 right-0 border-t border-white/10"
+                key={index}
+                className="absolute left-0 right-0"
                 style={{ top: lane.y - ROAD_TOP + 15, height: 2 }}
               >
-                <div className="mt-0.5 h-[2px] w-full bg-[repeating-linear-gradient(90deg,#fde68a_0_26px,transparent_26px_42px)] opacity-80" />
+                <div className="h-[2px] w-full bg-[repeating-linear-gradient(90deg,#fde68a_0_26px,transparent_26px_44px)] opacity-85" />
               </div>
             ))}
           </div>
 
-          <div className="absolute left-0 right-0 top-[125px] h-10 bg-[#88c56a]" />
-          <div className="absolute left-0 right-0 bottom-0 h-[165px] bg-[#88c56a]" />
+          <div className="absolute left-0 right-0 bottom-0 h-[170px] bg-[#88c56a]" />
 
-          <div className="absolute left-4 top-[132px] text-lg">🌼</div>
-          <div className="absolute right-4 top-[132px] text-lg">🌼</div>
+          <div className="absolute left-4 top-[135px] text-lg">🌼</div>
+          <div className="absolute right-4 top-[135px] text-lg">🌼</div>
           <div className="absolute left-6 bottom-20 text-xl">🌿</div>
           <div className="absolute right-8 bottom-24 text-xl">🌼</div>
-          <div className="absolute left-1/2 bottom-10 -translate-x-1/2 text-sm font-bold text-[#5b3a22]">
+
+          <div className="absolute left-1/2 bottom-12 -translate-x-1/2 text-sm font-bold text-[#5b3a22]">
             Start here
           </div>
 
           {cars.map((car) => (
             <div
               key={car.id}
-              className="absolute flex items-center justify-center rounded-xl"
+              className="absolute flex items-center justify-center"
               style={{
                 left: car.x,
                 top: car.y,
                 width: car.width,
                 height: car.height,
-                fontSize: car.width > 60 ? 28 : 24,
+                fontSize: car.width > 60 ? 36 : 28,
                 transform: car.direction === -1 ? 'scaleX(-1)' : 'none',
               }}
             >
@@ -392,9 +404,9 @@ export default function DuckGamePage() {
             </div>
           ))}
 
-          {ducklings.map((duck, i) => (
+          {ducklings.map((duck, index) => (
             <div
-              key={i}
+              key={index}
               className="absolute flex items-center justify-center"
               style={{
                 left: duck.x,
@@ -402,7 +414,6 @@ export default function DuckGamePage() {
                 width: DUCKLING_SIZE,
                 height: DUCKLING_SIZE,
                 fontSize: 18,
-                transition: 'transform 40ms linear',
               }}
             >
               🐥
@@ -417,11 +428,16 @@ export default function DuckGamePage() {
               width: DUCK_SIZE,
               height: DUCK_SIZE,
               fontSize: 28,
-              transition: 'transform 40ms linear',
             }}
           >
             🦆
           </div>
+
+          {winFlash && !gameOver && (
+            <div className="pointer-events-none absolute left-1/2 top-[112px] -translate-x-1/2 rounded-full bg-white/85 px-4 py-2 text-sm font-extrabold text-[#2563eb] shadow-lg">
+              Family saved! 🎉
+            </div>
+          )}
 
           {gameOver && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35 p-6">
@@ -429,7 +445,7 @@ export default function DuckGamePage() {
                 <div className="text-4xl">💥</div>
                 <h2 className="mt-2 text-2xl font-extrabold">Duck down!</h2>
                 <p className="mt-2 text-sm text-[#7b4a34]">
-                  Traffic was too spicy. Let’s try that crossing again.
+                  Traffic was too wild. Tap below and try again.
                 </p>
                 <button
                   onClick={restartGame}
@@ -438,12 +454,6 @@ export default function DuckGamePage() {
                   Play again
                 </button>
               </div>
-            </div>
-          )}
-
-          {winFlash && !gameOver && (
-            <div className="pointer-events-none absolute left-1/2 top-[110px] -translate-x-1/2 rounded-full bg-white/80 px-4 py-2 text-sm font-extrabold text-[#2563eb] shadow-lg">
-              Family saved! 🎉
             </div>
           )}
         </div>
@@ -455,8 +465,9 @@ export default function DuckGamePage() {
 
           <div className="mx-auto grid w-[220px] grid-cols-3 gap-3">
             <div />
+
             <button
-              className={buttonBase}
+              className={buttonClass}
               onPointerDown={() => press('up', true)}
               onPointerUp={() => press('up', false)}
               onPointerLeave={() => press('up', false)}
@@ -464,10 +475,11 @@ export default function DuckGamePage() {
             >
               ⬆️
             </button>
+
             <div />
 
             <button
-              className={buttonBase}
+              className={buttonClass}
               onPointerDown={() => press('left', true)}
               onPointerUp={() => press('left', false)}
               onPointerLeave={() => press('left', false)}
@@ -477,7 +489,7 @@ export default function DuckGamePage() {
             </button>
 
             <button
-              className={buttonBase}
+              className={buttonClass}
               onPointerDown={() => press('down', true)}
               onPointerUp={() => press('down', false)}
               onPointerLeave={() => press('down', false)}
@@ -487,7 +499,7 @@ export default function DuckGamePage() {
             </button>
 
             <button
-              className={buttonBase}
+              className={buttonClass}
               onPointerDown={() => press('right', true)}
               onPointerUp={() => press('right', false)}
               onPointerLeave={() => press('right', false)}
