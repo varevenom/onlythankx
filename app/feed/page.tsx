@@ -271,6 +271,12 @@ export default function FeedPage() {
               Thankx Mart 🛒
             </Link>
             <Link
+              href="/duck-game"
+              className="rounded-full bg-[linear-gradient(135deg,#dff3ff_0%,#bfe8ff_100%)] px-4 py-2 font-semibold text-gray-900 shadow-[0_10px_25px_rgba(58,169,255,0.18)] transition hover:-translate-y-[1px]"
+            >
+              Duck Game 🦆
+            </Link>
+            <Link
               href="/profile"
               className="rounded-full px-3 py-2 text-gray-500 transition hover:bg-orange-50 hover:text-gray-900"
             >
@@ -310,6 +316,35 @@ export default function FeedPage() {
                 🍪🧁🛒
               </div>
               <div className="rounded-full bg-[linear-gradient(135deg,#ff9b76_0%,#ff7f5a_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(255,127,90,0.28)]">
+                Open Game
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/duck-game"
+          className="mb-6 block overflow-hidden rounded-[32px] border border-sky-100/90 bg-[linear-gradient(135deg,#f2fbff_0%,#eef8ff_45%,#dff3ff_100%)] p-5 shadow-[0_18px_50px_rgba(80,170,255,0.12)] transition hover:-translate-y-[2px] hover:shadow-[0_24px_60px_rgba(80,170,255,0.18)]"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
+                New game
+              </div>
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-gray-900">
+                Play Duck Pond Dash 🦆
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600">
+                Help mama duck and the little ducklings cross the busy road and
+                reach the safe pond.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-white/80 px-4 py-3 text-3xl shadow-sm">
+                🦆🐥🚗
+              </div>
+              <div className="rounded-full bg-[linear-gradient(135deg,#67c6ff_0%,#3aa9ff_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(58,169,255,0.28)]">
                 Open Game
               </div>
             </div>
@@ -418,7 +453,7 @@ export default function FeedPage() {
       </section>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-orange-100 bg-white/90 px-3 py-2 backdrop-blur-2xl md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
           <Link
             href="/"
             className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
@@ -432,6 +467,13 @@ export default function FeedPage() {
           >
             🛒
             <div className="mt-1">Mart</div>
+          </Link>
+          <Link
+            href="/duck-game"
+            className="rounded-2xl px-3 py-2 text-center text-xs font-medium text-gray-700 transition hover:bg-orange-50"
+          >
+            🦆
+            <div className="mt-1">Duck</div>
           </Link>
           <Link
             href="/feed"
